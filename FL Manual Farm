@@ -1,1 +1,104 @@
+local walktovector = nil
+local player = game.Players.LocalPlayer
+--Auto Target
+if player.Name == main then
+    print("Main")
+    local socket = syn.websocket.connect("ws://localhost:8080/identifier:master&robloxid:"..tostring(game.Players.LocalPlayer.UserId))
+    repeat task.wait() until socket
+    game:GetService"RunService".RenderStepped:Connect(function()
+        socket:Send(tostring(game.Players.LocalPlayer.Character.HumanoidRootPart.Position))
+    end)
+else
+repeat task.wait() until game.Players:FindFirstChild(main)
+repeat task.wait() until game.Players[main].Character:FindFirstChild("HumanoidRootPart")
+local MainCords = game.Players[main].Character.HumanoidRootPart.Position
+local socket = syn.websocket.connect("ws://localhost:8080/identifier:slave&robloxid:"..tostring(game.Players.LocalPlayer.UserId))
+repeat task.wait() until socket
+socket.OnMessage:Connect(function(string)
+    local cords = string.split(string, ", ")
+    MainCords = Vector3.new(tonumber(cords[1]),tonumber(cords[2]),tonumber(cords[3]))
+end)
 
+function find_nearest_enemy()
+    local nearest, nearest_distance, typ = nil, math.huge, 1
+    for _,v in pairs(workspace.Enemies:GetChildren()) do
+        pcall(function()
+            local dist = (player.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+            if dist > nearest_distance then return end
+            nearest = v.HumanoidRootPart
+            nearest_distance = dist
+        end)
+    end
+    return nearest, nearest_distance
+end
+
+
+
+game:GetService("RunService"):BindToRenderStep("move", Enum.RenderPriority.Character.Value + 1, function()
+	if player.Character and player.Character:FindFirstChild("Humanoid") then
+        for _,v in pairs(getconnections(player.Character.Humanoid:GetPropertyChangedSignal("WalkSpeed"))) do
+            v:Disable()
+        end
+        for _,v in pairs(getconnections(player.Character.Humanoid.Changed)) do
+            v:Disable()
+        end
+        for _,v in pairs(getconnections(player.Character.Humanoid.MoveToFinished)) do
+            v:Disable()
+        end
+        player.Character.Humanoid.WalkSpeed = walkSpeed
+        player.Character.Humanoid.AutoRotate = false
+
+        if player.Character then
+            game.Players.LocalPlayer.Character.Humanoid:Move((MainCords - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Unit, false)
+            goal = find_nearest_enemy()
+            if goal then
+                rotation = goal.Position
+                if rotation then
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position, Vector3.new(rotation.X, player.Character.HumanoidRootPart.Position.Y, rotation.Z))
+                end
+            end
+        end
+    end
+end)
+
+-- Username check
+local username = player.Name
+
+task.spawn(function()
+    while _G.t and task.wait() do
+        if not player.Character or not goal then continue end
+        pcall(function()
+                if table.find(DPS, username) then -- DPS
+                    if (player.Character.HumanoidRootPart.Position - goal.Position).Magnitude < range then
+                        game:GetService("ReplicatedStorage").useSpell:FireServer("E")
+                        game:GetService("ReplicatedStorage").useSpell:FireServer("Q")
+                    end
+                elseif table.find(Healer, username) then -- Healer
+                    for i,v in pairs(game.Players:GetChildren()) do
+                        if (v.Character.Humanoid.MaxHealth - v.Character.Humanoid.Health) ~= 0 then
+                            game:GetService("ReplicatedStorage").useSpell:FireServer("E")
+                            break
+                        end
+                    end
+                    task.wait(.5)
+                    for i,v in pairs(game.Players:GetChildren()) do
+                        if (v.Character.Humanoid.MaxHealth - v.Character.Humanoid.Health) ~= 0 then
+                            game:GetService("ReplicatedStorage").useSpell:FireServer("Q")
+                            break
+                        end
+                    end
+                end
+        end)
+    end
+end)
+if table.find(Warrior, username) then
+    while task.wait() do
+        game:GetService("ReplicatedStorage").Swing:FireServer()
+    end
+end
+
+while _G.t and task.wait() do
+    
+end
+game:GetService("RunService"):UnbindFromRenderStep("move")
+end
