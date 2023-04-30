@@ -1,3 +1,17 @@
+--Toggle
+_G.t = not _G.t
+if not game:IsLoaded() then game.Loaded:Wait() end
+if game.PlaceId ~= 11872917490 then
+-- Configuration
+Healer = Healer or {}
+DPS = DPS or {}
+Warrior = Warrior or {}
+main = main or ""
+range = range or 25
+walkSpeed = walkSpeed or 18
+local walktovector = nil
+local player = game.Players.LocalPlayer
+
 --Auto Target
 if player.Name == main then
     print("Main")
