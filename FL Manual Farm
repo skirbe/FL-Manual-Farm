@@ -1,5 +1,3 @@
-local walktovector = nil
-local player = game.Players.LocalPlayer
 --Auto Target
 if player.Name == main then
     print("Main")
